@@ -4,12 +4,12 @@ import deck
 class TestNewCard(unittest.TestCase):
 
     def testCardInit(self):
-        self.card = deck.Card('heart','A',1)
+        self.card = deck.Card('heart','A',1, self)
         self.assertEqual(self.card.suit, 'heart')
         self.assertEqual(self.card.rank, 'A')
         self.assertEqual(self.card.value, 1)
         self.assertFalse(self.card.dealt)
-        self.assertFalse(self.card.discard)
+        self.assertFalse(self.card.discarded)
         
 
 
@@ -186,15 +186,222 @@ class TestNewDeck(unittest.TestCase):
         self.assertEqual(self.deck1.cards[51].value, 1)
 
 
+class TestCardDeal(unittest.TestCase):
+
+    def setUp(self):
+        self.deck1 = deck.Deck()
+        self.playerHand = deck.Hand('player')
+        self.dealerHand = deck.Hand('dealer')
+
+
     def testCardDeal(self):
-        self.assertEqual(self.deck1.dealtCardCount, 0)
-        self.deck1.deal()
-        self.assertEqual(self.deck1.dealtCardCount, 1)
+        # deal first card to player
+        self.assertEqual(self.deck1.dealtCount, 0)
+        self.deck1.deal(self.playerHand)
+        self.assertEqual(len(self.playerHand.cards), 1)
+        self.assertEqual(self.deck1.dealtCount, 1)
         self.assertTrue(self.deck1.cards[0].dealt)
-        self.deck1.deal()
-        self.assertEqual(self.deck1.dealtCardCount, 2)
+        self.assertEqual(self.playerHand.cards[0].suit, 'club')
+        self.assertEqual(self.playerHand.cards[0].rank, '2')
+        self.assertEqual(self.playerHand.cards[0].value, 2)
+        self.assertTrue(self.playerHand.cards[0].faceUp)
+        
+        self.deck1.deal(self.dealerHand)
+        self.assertEqual(len(self.dealerHand.cards), 1)
+        self.assertEqual(self.deck1.dealtCount, 2)
         self.assertTrue(self.deck1.cards[1].dealt)
+        self.assertEqual(self.dealerHand.cards[0].suit, 'club')
+        self.assertEqual(self.dealerHand.cards[0].rank, '3')
+        self.assertEqual(self.dealerHand.cards[0].value, 3)
+        self.assertTrue(self.dealerHand.cards[0].faceUp)
         # TODO add more, and test for exception when all 52 cards dealt and attempt to deal again
+        # TODO exception if attempt to deal a card already dealt
+
+    def testDealHand(self):
+        self.deck1.deal(self.playerHand)
+        self.assertEqual(self.deck1.dealtCount, 1)
+        self.assertTrue(self.deck1.cards[0].dealt)
+        self.assertEqual(len(self.playerHand.cards), 1)
+        # check optional faceUp False for dealer
+        self.deck1.deal(self.dealerHand, False)
+        self.assertEqual(self.deck1.dealtCount, 2)
+        self.assertTrue(self.deck1.cards[1].dealt)
+        self.assertEqual(len(self.dealerHand.cards), 1)
+        self.assertFalse(self.dealerHand.cards[0].faceUp)
+
+class TestCardDiscard(unittest.TestCase):
+
+    def setUp(self):
+        self.deck1 = deck.Deck()
+        self.card1 = self.deck1.cards[0]
+        self.card2 = self.deck1.cards[1]
+
+    def testdiscardCard(self):
+        self.assertEqual(self.deck1.discardedCount, 0)
+        self.assertFalse(self.card1.discarded)
+        self.assertFalse(self.card2.discarded)
+        self.card1.discard()
+        self.assertEqual(self.deck1.discardedCount, 1)
+        self.assertTrue(self.card1.discarded)
+        self.card2.discard()
+        self.assertEqual(self.deck1.discardedCount, 2)
+        self.assertTrue(self.card2.discarded)
+        # TODO exception test if attempt to discard a card already discarded
+    
+
+class TestHand(unittest.TestCase):
+
+    def setUp(self):
+        self.playerHand = deck.Hand('player')
+        self.dealerHand = deck.Hand('dealer')
+
+    def testHandInit(self):
+        self.assertEqual(self.playerHand.type, 'player')
+        self.assertEqual(self.dealerHand.type, 'dealer')
+        self.assertEqual(len(self.playerHand.cards), 0)
+        self.assertEqual(len(self.dealerHand.cards), 0)
+        self.assertEqual(self.playerHand.hardTotal, 0)
+        self.assertEqual(self.playerHand.softTotal, 0)
+        self.assertEqual(self.dealerHand.hardTotal, 0)
+        self.assertEqual(self.dealerHand.softTotal, 0)
+
+class TestNewPlayer(unittest.TestCase):
+
+    def setUp(self):
+        self.player1 = deck.Player(0)
+
+    def testPlayer1Init(self):
+        self.assertEqual(self.player1.position, 0)
+        self.assertEqual(len(self.player1.hand.cards), 0)
+        self.assertEqual(self.player1.hand.type, 'player')
+
+    def testPlayer2Init(self):
+        self.player2 = deck.Player(1)
+        self.assertEqual(self.player2.position, 1)
+        self.assertEqual(len(self.player2.hand.cards), 0)
+        self.assertEqual(self.player2.hand.type, 'player')
+        
+
+class TestDealer(unittest.TestCase):
+
+    def setUp(self):
+        self.dealer = deck.Dealer(1)
+
+    def testDealerInit(self):
+        self.assertEqual(len(self.dealer.hand.cards), 0)
+        self.assertEqual(self.dealer.hand.type, 'dealer')
+        self.assertEqual(self.dealer.position, 1)
+
+
+class TestRound(unittest.TestCase):
+
+    def testOnePlayerRound(self):
+        self.round1 = deck.Round(1)
+        self.assertEqual(len(self.round1.players), 1)
+        self.assertEqual(self.round1.players[0].position, 0)
+        self.assertEqual(self.round1.dealer.position, 1)
+        self.assertEqual(len(self.round1.deck.cards), 52)
+
+    def testTwoPlayerRound(self):
+        self.round2 = deck.Round(2)
+        self.assertEqual(len(self.round2.players), 2)
+        self.assertEqual(self.round2.players[0].position, 0)
+        self.assertEqual(self.round2.players[1].position, 1)
+        self.assertEqual(self.round2.dealer.position, 2)
+
+    def testOnePlayerDeal(self):
+        self.round3 = deck.Round(1)
+        self.round3.dealNewRound()
+        self.assertEqual(len(self.round3.players[0].hand.cards), 2)
+        self.assertTrue(self.round3.players[0].hand.cards[0].faceUp)
+        self.assertTrue(self.round3.players[0].hand.cards[1].faceUp)
+        self.assertEqual(len(self.round3.dealer.hand.cards), 2)
+        self.assertTrue(self.round3.dealer.hand.cards[0].faceUp)
+        # second dealer's card is not face up
+        self.assertFalse(self.round3.dealer.hand.cards[1].faceUp)
+
+    def testTwoPlayerDeal(self):
+        self.round4 = deck.Round(2)
+        self.round4.dealNewRound()
+        self.assertEqual(len(self.round4.players[0].hand.cards), 2)
+        self.assertTrue(self.round4.players[0].hand.cards[0].faceUp)
+        self.assertTrue(self.round4.players[0].hand.cards[1].faceUp)
+        
+        self.assertEqual(len(self.round4.players[1].hand.cards), 2)
+        self.assertTrue(self.round4.players[1].hand.cards[0].faceUp)
+        self.assertTrue(self.round4.players[1].hand.cards[1].faceUp)
+        
+        self.assertEqual(len(self.round4.dealer.hand.cards), 2)
+        self.assertTrue(self.round4.dealer.hand.cards[0].faceUp)
+        # second dealer's card is not face up
+        self.assertFalse(self.round4.dealer.hand.cards[1].faceUp)
+
+
+    def testDealerReveal(self):
+        self.round5 = deck.Round(2)
+        self.round5.dealNewRound()
+        self.assertFalse(self.round5.dealer.hand.cards[1].faceUp)
+        self.round5.dealer.turnOverCard()
+        self.assertTrue(self.round5.dealer.hand.cards[1].faceUp)
+
+
+
+class TestHandTotals(unittest.TestCase):
+    def setUp(self):
+        self.playerHand = deck.Hand('player')
+        self.deck1 = deck.Deck()
+
+    def testHandTotals1(self):
+        self.playerHand.cards.append(self.deck1.cards[0])
+        self.playerHand.cards.append(self.deck1.cards[1])
+        self.playerHand.valueHand()
+        self.assertEqual(self.playerHand.hardTotal, 5)
+        self.assertEqual(self.playerHand.softTotal, 5)
+        self.playerHand.cards.append(self.deck1.cards[12])
+        self.playerHand.valueHand()
+        self.assertEqual(self.playerHand.hardTotal, 6)
+        self.assertEqual(self.playerHand.softTotal, 16)
+        self.playerHand.cards.append(self.deck1.cards[25])
+        self.playerHand.valueHand()
+        self.assertEqual(self.playerHand.hardTotal, 7)
+        self.assertEqual(self.playerHand.softTotal, 17)
+        self.playerHand.cards.append(self.deck1.cards[8])
+        self.playerHand.valueHand()
+        self.assertEqual(self.playerHand.hardTotal, 17)
+        self.assertEqual(self.playerHand.softTotal, 17)
+                                     
+class TestPlayerActions(unittest.TestCase):
+    def setUp(self):
+        self.player1 = deck.Player(0)
+        self.deck1 = deck.Deck()
+        self.deck1.deal(self.player1.hand)
+        self.deck1.deal(self.player1.hand)
+
+    def testHit(self):
+        self.player1.hit(self.deck1)
+        self.assertEqual(len(self.player1.hand.cards), 3)
+        self.assertEqual(self.player1.hand.hardTotal, 9)
+        self.assertFalse(self.player1.isBust)
+        self.player1.hit(self.deck1)
+        self.assertEqual(len(self.player1.hand.cards), 4)
+        self.assertEqual(self.player1.hand.hardTotal, 14)
+        self.assertFalse(self.player1.isBust)
+        self.player1.hit(self.deck1)
+        self.assertEqual(len(self.player1.hand.cards), 5)
+        self.assertEqual(self.player1.hand.hardTotal, 20)
+        self.assertFalse(self.player1.isBust)
+        self.player1.hit(self.deck1)
+        self.assertEqual(len(self.player1.hand.cards), 6)
+        self.assertEqual(self.player1.hand.hardTotal, 27)
+        self.assertTrue(self.player1.isBust)
+        
+    #TODO create a new unit test with custom deck of cards, so correct cards to test
+        # that player busts at exactly 22
+    
+    
+        
+     
+
 
 if __name__ == '__main__':
     unittest.main()
