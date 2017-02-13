@@ -370,7 +370,7 @@ class TestHandTotals(unittest.TestCase):
         self.assertEqual(self.playerHand.hardTotal, 17)
         self.assertEqual(self.playerHand.softTotal, 17)
                                      
-class TestPlayerActions(unittest.TestCase):
+class TestPlayerHit(unittest.TestCase):
     def setUp(self):
         self.player1 = deck.Player(0)
         self.deck1 = deck.Deck()
@@ -398,8 +398,22 @@ class TestPlayerActions(unittest.TestCase):
     #TODO create a new unit test with custom deck of cards, so correct cards to test
         # that player busts at exactly 22
     
+
+class TestDisplayHand(unittest.TestCase):
+
+    def setUp(self):
+        self.player1 = deck.Player(0)
+        self.deck1 = deck.Deck()
+        self.deck1.deal(self.player1.hand)
+        self.deck1.deal(self.player1.hand)
+
+
+    def testDisplayHand(self):
+        self.assertEqual(self.player1.hand.displayHand(),
+                         " '2' of 'club' '3' of 'club' totalling: 5")
+
+    #TODO custom deck so can test softHand total displays too
     
-        
      
 
 
