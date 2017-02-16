@@ -415,6 +415,78 @@ class TestDisplayHand(unittest.TestCase):
     #TODO custom deck so can test softHand total displays too
     
      
+class TestCheckBlackjack(unittest.TestCase):
+
+    def setUp(self):
+        self.player1 = deck.Player(0)
+        self.deck1 = deck.Deck()
+        self.dealer = deck.Dealer(1)
+
+    def testBlackjackTrue(self):
+        # has 21 with two cards
+        self.assertFalse(self.player1.hand.checkBlackjack())
+        self.player1.hand.cards.append(self.deck1.cards[11])
+        self.player1.hand.cards.append(self.deck1.cards[12])
+        self.assertTrue(self.player1.hand.checkBlackjack())
+
+
+    def testBlackjackFalse1(self):
+        # has 21 with three cards
+        self.assertFalse(self.player1.hand.checkBlackjack())
+        self.player1.hand.cards.append(self.deck1.cards[11])
+        self.player1.hand.cards.append(self.deck1.cards[3])
+        self.player1.hand.cards.append(self.deck1.cards[4])
+        self.assertFalse(self.player1.hand.checkBlackjack())
+
+    def testBlackjackFalse2(self):
+        # 2 cards but under 21
+        self.assertFalse(self.player1.hand.checkBlackjack())
+        self.player1.hand.cards.append(self.deck1.cards[11])
+        self.player1.hand.cards.append(self.deck1.cards[10])
+        self.assertFalse(self.player1.hand.checkBlackjack())
+
+    def testBlackjackFalse3(self):
+        # over 21
+        self.assertFalse(self.player1.hand.checkBlackjack())
+        self.player1.hand.cards.append(self.deck1.cards[11])
+        self.player1.hand.cards.append(self.deck1.cards[4])
+        self.player1.hand.cards.append(self.deck1.cards[10])
+        self.assertFalse(self.player1.hand.checkBlackjack())
+        
+class TestResolveBlackjack(unittest.TestCase):
+     def setUp(self):
+        self.round = deck.Round(1)
+        self.dealer = self.round.dealer
+        self.player = self.round.players[0]
+
+     def testDealerBlackjack(self):
+        self.dealer.blackjack = True
+        self.player.blackjack = False
+        playerResult = self.round.resolveBlackjack(self.dealer, self.player)
+        self.assertEqual(playerResult, 'loss')
+
+     def testPlayerBlackjack(self):
+        self.dealer.blackjack = False
+        self.player.blackjack = True
+        playerResult= self.round.resolveBlackjack(self.dealer, self.player)
+        self.assertEqual(playerResult, 'win')
+
+     def testBothBlackjack(self):
+        self.dealer.blackjack = True
+        self.player.blackjack = True
+        playerResult = self.round.resolveBlackjack(self.dealer, self.player)
+        self.assertEqual(playerResult, 'push')
+
+     def testNeitherBlackjack(self):
+        self.dealer.blackjack = False
+        self.player.blackjack = False
+        playerResult = self.round.resolveBlackjack(self.dealer, self.player)
+        self.assertIsNone(playerResult)
+ 
+            
+            
+        
+    
 
 
 if __name__ == '__main__':
