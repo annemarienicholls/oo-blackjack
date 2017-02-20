@@ -123,6 +123,8 @@ class Player:
         self.position = position
         self.hand = Hand('player')
         self.blackjack = False
+        self.result = None
+        self.isBust = False
 
     # TODO the deal function is on the deck, so to get this to work needed
     # to pass the deck to the player object so the player can utilise it.
@@ -135,13 +137,14 @@ class Player:
         else:
             self.isBust = True
 
+
     def playerChoice(self, round):
         playerTurn = True
 
         # value hand and end player's turn if 21 (Blackjack)
         # TODO how to test without having to initialise a round
         # (with shuffled deck!) -or separate shuffle from round init
-        if self.hand.checkBlackjack():
+        if self.hand.checkBlackjack() == True:
             print("The player has" + self.hand.displayHand())
             print("The player has Blackjack")
             playerTurn = False
@@ -185,6 +188,8 @@ class Dealer:
         self.position = position
         self.hand = Hand('dealer')
         self.blackjack = False
+        self.isBust = False
+
 
     def turnOverCard(self):
         self.hand.cards[1].faceUp = True
@@ -200,15 +205,30 @@ class Dealer:
         # reveals the dealer's hidden card
         self.turnOverCard()
         print ("The dealer has" + self.hand.displayHand())
-        if self.hand.checkBlackjack:
+        if self.hand.checkBlackjack():
             self.blackjack = True
 
+
+    def play(self, round):
+        # deal cards until reach soft-17 or bust
+        self.hand.valueHand()
+        while self.hand.softTotal < 17:
+            round.deck.deal(self.hand)
+            self.hand.valueHand()
+            print("The dealer has" + self.hand.displayHand())
+        if self.hand.softTotal > 21:
+            self.isBust = True
+            print("The dealer has busted!")
+            
+            
+        
 
 class Round:
     ''' A round has a number of players plus dealer'''
 
     def __init__(self, players):
         self.players = []
+        self.dealer_plays = False
 
         # TODO change this, so players exist independent of round and get
         # added into round based on the player's position (which may change).
@@ -251,8 +271,11 @@ class Round:
             self.deck.deal(self.dealer.hand, dealerCardFaceUp)
 
     def resolveBlackjack(self, dealer, player):
-        # pass dealer and player and work out player's result
+        # if player bust, they lose
+        if player.isBust:
+            return 'loss'
 
+        # else check for Blackjacks and work out player's result
         if dealer.blackjack:
             if player.blackjack:
                 return 'push'
@@ -262,13 +285,40 @@ class Round:
             if player.blackjack:
                 return 'win'
             else:
-                return
+                # dealer needs to play to resolve remaining players
+                self.dealer_plays = True
+                
 
     def checkTableBlackjack(self):
         # check dealer against each player and resolve blackjacks
         for player in self.players:
             player.result = self.resolveBlackjack(self.dealer, player)
-            print ("player has %r" % player.result)
+
+
+    def resolve_remaining_players(self):
+        # if dealer is bust, then players left standing win
+        
+        if self.dealer.isBust:
+            for player in self.players:
+                if player.result == None:
+                    player.result = 'win'
+        else:
+            for player in self.players:
+                if player.result == None:
+                    if player.hand.softTotal > self.dealer.hand.softTotal:
+                        player.result = 'win'
+                    elif player.hand.softTotal == self.dealer.hand.softTotal:
+                        player.result = 'push'
+                    else:
+                        player.result = 'loss'
+
+    def player_results(self):
+        # show the final results
+        for player in self.players:
+            print("player", player.result)
+        
+                    
+        
 
     # def dealerTurn(self):
     # if any player still standing need to:
@@ -285,7 +335,7 @@ def main():
 
     # TODO add function to get number of players from input. Until then,
     # start with 2 players
-    round1 = Round(2)
+    round1 = Round(3)
     round1.dealNewRound()
 
     # show dealer's card
@@ -297,7 +347,18 @@ def main():
 
     # when players turns are complete, dealer reveals second card
     dealer.dealerRevealCard()
+
+    # resolve blackjacks first as game could end here
     round1.checkTableBlackjack()
+
+    # if round's dealer_plays is True, means at least one player still in
+    # dealer has to hit to soft-17
+    if round1.dealer_plays:
+        round1.dealer.play(round1)
+
+    # then check the results for the remaining players still in the game
+    round1.resolve_remaining_players()
+    round1.player_results()
 
     # resolve blackjacks first
     # if dealer has blackjack, then all players lose unless they also have
